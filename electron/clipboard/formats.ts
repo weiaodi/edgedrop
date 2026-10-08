@@ -1,3 +1,4 @@
+import { hostPlatform } from '../main/platform'
 /**
  * Reading & categorizing the system clipboard.
  *
@@ -11,10 +12,11 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { existsSync } from 'node:fs'
 import koffi from 'koffi'
+import { getMacNative } from '../main/macos'
 import type { ClipboardImageSource, ItemData } from '../../shared/types'
 
 let getSeqNum: (() => number) | null = null
-if (process.platform === 'win32') {
+if (hostPlatform === 'win32') {
   try {
     const user32 = koffi.load('user32.dll')
     getSeqNum = user32.func('uint32 GetClipboardSequenceNumber()')
@@ -24,6 +26,7 @@ if (process.platform === 'win32') {
 }
 
 export function getClipboardSequenceNumber(): number {
+  if (hostPlatform === 'darwin') return getMacNative()?.changeCount() ?? 0
   if (getSeqNum) {
     try {
       return getSeqNum()
@@ -52,13 +55,17 @@ export const CF_FILE_LIST = 'FileNameW'
  * is unavailable or times out.
  */
 async function readFileListAsync(): Promise<string[] | null> {
+  if (hostPlatform === 'darwin') {
+    const paths = filterValidPaths(getMacNative()?.files() ?? [])
+    return paths.length ? paths : null
+  }
   try {
     // First, confirm there is actually a file list on the clipboard before
     // spawning a process.  FileNameW being present is sufficient signal.
     const buf = clipboard.readBuffer(CF_FILE_LIST)
     if (!buf || buf.length < 4) return null
 
-    if (process.platform === 'win32') {
+    if (hostPlatform === 'win32') {
       try {
         const psPath = getSystemPowerShellPath()
         // Await the result so we actually get all paths — the previous
@@ -96,6 +103,10 @@ async function readFileListAsync(): Promise<string[] | null> {
 
 /** Fast, non-blocking check of FileNameW contents for clipboard signatures. */
 function readFileListFast(): string[] | null {
+  if (hostPlatform === 'darwin') {
+    const paths = getMacNative()?.files() ?? []
+    return paths.length ? paths : null
+  }
   try {
     const buf = clipboard.readBuffer(CF_FILE_LIST)
     if (!buf || buf.length < 4) return null
@@ -115,6 +126,7 @@ function readFileListFast(): string[] | null {
  * retrigger Explorer's delayed-render pipeline.
  */
 export function clipboardHasFileNameW(): boolean {
+  if (hostPlatform === 'darwin') return getMacNative()?.hasFiles() ?? false
   try {
     const buf = clipboard.readBuffer(CF_FILE_LIST)
     return !!(buf && buf.length >= 4)
@@ -136,6 +148,10 @@ export function clipboardHasFileNameW(): boolean {
  * the last capture and ignores that flush.
  */
 export function clipboardFilesContentKey(): string | null {
+  if (hostPlatform === 'darwin') {
+    const paths = getMacNative()?.files() ?? []
+    return paths.length ? `files|${paths.join('\n')}` : null
+  }
   try {
     const buf = clipboard.readBuffer(CF_FILE_LIST)
     if (!buf || buf.length < 4) return null
@@ -323,6 +339,7 @@ function isIgnoredFormat(format: string): boolean {
  * and should be ignored by clipboard monitors.
  */
 export function isClipboardExcluded(): boolean {
+  if (hostPlatform === 'darwin' && getMacNative()?.isPrivate()) return true
   const formats = clipboard.availableFormats()
 
   if (formats.some((f) => isIgnoredFormat(f))) {

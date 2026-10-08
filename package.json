@@ -1,7 +1,7 @@
 {
   "name": "edge-drop",
-  "version": "0.3.2",
-  "description": "Edge-Drop — a clipboard manager that lives on the left edge of your screen and expands on hover.",
+  "version": "0.4.0",
+  "description": "Edge-Drop \u2014 a clipboard manager that lives on the left edge of your screen and expands on hover.",
   "author": "Edge-Drop",
   "license": "Apache-2.0",
   "private": true,
@@ -14,12 +14,20 @@
     "build:store": "npm run build && electron-builder --win appx -c.extraMetadata.buildTarget=store",
     "build:msix": "npm run build && electron-builder --win appx -c.extraMetadata.buildTarget=store",
     "build:win": "npm run build:github",
-    "package": "npm run build:github",
+    "package": "npm run build && electron-builder --publish never",
     "preview": "electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
-    "test": "vitest run"
+    "test": "vitest run",
+    "predev": "npm run build:native:mac",
+    "build:native:mac": "node scripts/build-mac-native.mjs",
+    "prebuild": "npm run build:native:mac",
+    "build:mac": "npm run build && electron-builder --mac --publish never",
+    "build:mac:arm64": "npm run build && electron-builder --mac --arm64 --publish never",
+    "build:mac:x64": "npm run build && electron-builder --mac --x64 --publish never",
+    "build:mac:all": "npm run build && electron-builder --mac --arm64 --x64 --publish never",
+    "test:mac": "node scripts/smoke-mac.mjs"
   },
   "build": {
     "appId": "com.edgedrop.app",
@@ -46,13 +54,10 @@
       "!**/node_modules/@radix-ui/**",
       "!**/node_modules/svg-path-bbox/**",
       "!**/node_modules/react-dom/**",
-      "!**/node_modules/koffi/doc/**"
+      "!**/node_modules/koffi/doc/**",
+      "!resources/macos/**"
     ],
     "extraResources": [
-      {
-        "from": "resources/startup/EdgeDropStartup.exe",
-        "to": "startup/EdgeDropStartup.exe"
-      },
       {
         "from": "node_modules/emoji-datasource-twitter/img/twitter/64",
         "to": "emoji/64"
@@ -62,12 +67,13 @@
       "**/*.{node,dll}",
       "**/node_modules/koffi/**/*",
       "**/node_modules/@koromix/**/*",
-      "**/node_modules/@resvg/**/*"
+      "**/node_modules/@resvg/**/*",
+      "**/*.dylib"
     ],
     "publish": {
       "provider": "github",
-      "owner": "Deepender25",
-      "repo": "Edge-Drop"
+      "owner": "weiaodi",
+      "repo": "edgedrop"
     },
     "win": {
       "target": [
@@ -84,7 +90,13 @@
           ]
         }
       ],
-      "icon": "resources/icon.ico"
+      "icon": "resources/icon.ico",
+      "extraResources": [
+        {
+          "from": "resources/startup/EdgeDropStartup.exe",
+          "to": "startup/EdgeDropStartup.exe"
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,
@@ -106,13 +118,42 @@
         "internetClient"
       ],
       "customExtensionsPath": "resources/appx/startup-extensions.xml"
-    }
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "resources/icon-mac.png",
+      "category": "public.app-category.productivity",
+      "minimumSystemVersion": "12.0",
+      "hardenedRuntime": true,
+      "entitlements": "resources/entitlements.mac.plist",
+      "entitlementsInherit": "resources/entitlements.mac.plist",
+      "extraResources": [
+        {
+          "from": "resources/macos/libedgedrop.dylib",
+          "to": "macos/libedgedrop.dylib"
+        }
+      ],
+      "extendInfo": {
+        "LSUIElement": true,
+        "NSAccessibilityUsageDescription": "Edge-Drop uses Accessibility to paste selected clipboard items into the app you are using."
+      },
+      "artifactName": "Edge-Drop-${version}-mac-${arch}.${ext}"
+    },
+    "extraMetadata": {
+      "macAutoUpdates": false
+    },
+    "beforePack": "scripts/before-pack.cjs",
+    "afterPack": "scripts/after-pack.cjs"
   },
   "devDependencies": {
     "@fontsource/jetbrains-mono": "^5.3.0",
     "@fontsource/plus-jakarta-sans": "^5.3.0",
     "@iconify-json/cuida": "^1.2.5",
     "@iconify/react": "^6.0.2",
+    "@playwright/test": "^1.64.0",
     "@radix-ui/react-scroll-area": "^1.2.13",
     "@radix-ui/react-separator": "^1.1.11",
     "@types/node": "^20.11.30",
@@ -120,7 +161,7 @@
     "@types/react-dom": "^18.2.22",
     "@vitalets/google-translate-api": "^9.2.1",
     "@vitejs/plugin-react": "^4.2.1",
-    "electron": "^34.2.0",
+    "electron": "42.11.12",
     "electron-builder": "^26.15.3",
     "electron-vite": "^2.1.0",
     "emoji-datasource-twitter": "^16.0.0",

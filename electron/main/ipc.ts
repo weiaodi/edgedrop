@@ -1,3 +1,4 @@
+import { getMacNative } from './macos'
 /**
  * IPC handler registration.
  *
@@ -22,6 +23,7 @@ import type { ClipboardItem, ItemData, MergeResult } from '../../shared/types'
 import { quitAndInstallUpdate, checkForUpdatesManual, startUpdateDownload, syncAutoUpdaterState, getCachedUpdateState, triggerBackgroundCheck } from './updater'
 import { createId } from '../store/ids'
 import { isStoreBuild } from './config'
+import { automaticUpdatesAvailable } from './updater'
 import { applyLaunchAtLogin, refreshLaunchAtLoginFromOs } from './loginItems'
 import { toUnpackagedFilePath, toUnpackagedFilePaths } from '../store/paths'
 import { isPasteableEmoji } from '../../shared/emoji'
@@ -54,7 +56,11 @@ function toast(message: string, tone: 'info' | 'error' = 'info', params?: Record
 }
 
 /** Simulate pressing Ctrl+V via PowerShell after returning focus to the previous active window. */
-function simulatePaste(): void {
+function simulatePaste(expectedPid?: number): void {
+  if (process.platform === 'darwin') {
+    if (!expectedPid || !getMacNative()?.paste(expectedPid)) toast('toast.pasteFallback', 'info')
+    return
+  }
   if (process.platform === 'win32') {
     // Run via the persistent powershell host for near-zero latency (no process spawn overhead)
     psHost.run("Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^v')", 2000)
@@ -90,6 +96,7 @@ function simulatePaste(): void {
 async function writeFileListToClipboard(rawPaths: string[]): Promise<boolean> {
   const validPaths = toUnpackagedFilePaths(filterValidPaths(rawPaths))
   if (validPaths.length === 0) return false
+  if (process.platform === 'darwin') return getMacNative()?.writeFiles(validPaths) ?? false
   if (process.platform === 'win32') {
     try {
       const addLines = validPaths
@@ -141,6 +148,7 @@ export async function writeImageToClipboard(imagePath: string | null): Promise<b
  * our friendly filename. Atomic multi-format write via PowerShell DataObject.
  */
 async function writeImageWithNamedFile(imagePath: string, namedPath: string): Promise<boolean> {
+  if (process.platform === 'darwin') return getMacNative()?.writeImage(imagePath, namedPath) ?? false
   if (process.platform !== 'win32') return false
   try {
     const b64Img = Buffer.from(imagePath, 'utf8').toString('base64')
@@ -188,6 +196,17 @@ export async function syncLoginItemSettings(launchAtLogin?: boolean): Promise<vo
 }
 
 export function registerIpc(): void {
+  handle('platform:info', () => ({
+    platform: process.platform === 'darwin' || process.platform === 'win32' || process.platform === 'linux' ? process.platform : 'other',
+    nativeAvailable: process.platform !== 'darwin' || !!getMacNative(),
+    accessibilityTrusted: process.platform !== 'darwin' || !!getMacNative()?.trusted(),
+    automaticUpdatesAvailable: automaticUpdatesAvailable()
+  }))
+  handle('platform:accessibility-settings', async () => {
+    if (process.platform === 'darwin') {
+      await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility')
+    }
+  })
   handle('state:load', () => {
     return {
       items: getStore().toDto(),
@@ -443,9 +462,10 @@ export function registerIpc(): void {
       if (sendDelay < 0) {
         toast('toast.pasteFallback', 'info')
       } else {
+        const pastePid = process.platform === 'darwin' ? getMacNative()?.frontmostPid() : undefined
         setTimeout(() => {
           traceFg('sendKeys')
-          simulatePaste()
+          simulatePaste(pastePid)
           setTimeout(() => traceFg('sendKeys+400ms'), 400)
         }, sendDelay)
       }
@@ -509,9 +529,10 @@ export function registerIpc(): void {
       if (subSendDelay < 0) {
         toast('toast.pasteFallback', 'info')
       } else {
+        const pastePid = process.platform === 'darwin' ? getMacNative()?.frontmostPid() : undefined
         setTimeout(() => {
           traceFg('sendKeys')
-          simulatePaste()
+          simulatePaste(pastePid)
           setTimeout(() => traceFg('sendKeys+400ms'), 400)
         }, subSendDelay)
       }
@@ -544,9 +565,10 @@ export function registerIpc(): void {
       if (emojiSendDelay < 0) {
         toast('toast.pasteFallback', 'info')
       } else {
+        const pastePid = process.platform === 'darwin' ? getMacNative()?.frontmostPid() : undefined
         setTimeout(() => {
           traceFg('sendKeys')
-          simulatePaste()
+          simulatePaste(pastePid)
           setTimeout(() => traceFg('sendKeys+400ms'), 400)
         }, emojiSendDelay)
       }

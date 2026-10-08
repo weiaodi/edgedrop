@@ -9,6 +9,9 @@ import type { Settings } from './types'
 import type { DragRequest } from './types'
 
 export interface EdgeApi {
+  readonly platform: string
+  getPlatformInfo: () => Promise<import('./platform').PlatformInfo>
+  openAccessibilitySettings: () => Promise<void>
   /* Renderer -> Main */
   loadState: () => Promise<{
     items: import('./types').ClipboardItemDto[]

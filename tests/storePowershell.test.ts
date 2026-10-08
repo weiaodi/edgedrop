@@ -1,3 +1,4 @@
+vi.mock('../electron/main/platform', () => ({ hostPlatform: 'win32' }))
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { existsSync, mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'

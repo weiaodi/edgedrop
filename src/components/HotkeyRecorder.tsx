@@ -1,3 +1,4 @@
+import { isMac } from '../lib/platform'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { playToggleSound, playButtonClickSound } from '../lib/soundEffects'
 import { RotateCcwIcon, CloseIcon } from './icons'
@@ -16,8 +17,10 @@ function parseKeyBadges(accelerator: string): string[] {
     .split('+')
     .map((k) => {
       const trimmed = k.trim()
-      if (trimmed === 'CommandOrControl' || trimmed === 'Ctrl') return 'Ctrl'
-      if (trimmed === 'Meta' || trimmed === 'Super' || trimmed === 'Command') return 'Win'
+      if (trimmed === 'CommandOrControl') return isMac ? '⌘' : 'Ctrl'
+      if (trimmed === 'Ctrl' || trimmed === 'Control') return isMac ? '⌃' : 'Ctrl'
+      if (trimmed === 'Alt') return isMac ? '⌥' : 'Alt'
+      if (trimmed === 'Meta' || trimmed === 'Super' || trimmed === 'Command') return isMac ? '⌘' : 'Win'
       return trimmed.length === 1 ? trimmed.toUpperCase() : trimmed
     })
 }
@@ -29,7 +32,7 @@ function eventToAccelerator(e: KeyboardEvent): { accelerator: string; isValid: b
   if (e.ctrlKey) modifiers.push('Ctrl')
   if (e.altKey) modifiers.push('Alt')
   if (e.shiftKey) modifiers.push('Shift')
-  if (e.metaKey) modifiers.push('Super')
+  if (e.metaKey) modifiers.push(isMac ? 'Command' : 'Super')
 
   // Identify main non-modifier key
   let keyName = ''
@@ -80,7 +83,7 @@ function eventToAccelerator(e: KeyboardEvent): { accelerator: string; isValid: b
   return {
     accelerator: allParts.join('+'),
     isValid,
-    partialBadges: allParts.map(p => (p === 'Super' ? 'Win' : p))
+    partialBadges: parseKeyBadges(allParts.join('+'))
   }
 }
 

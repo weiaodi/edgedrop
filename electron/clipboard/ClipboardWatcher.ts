@@ -1,3 +1,4 @@
+import { hostPlatform } from '../main/platform'
 /**
  * Reports genuinely new clipboard content.
  *
@@ -132,7 +133,7 @@ export class ClipboardWatcher {
     }
 
     const now = Date.now()
-    if (this.absorbLateExplorerFormats(now)) {
+    if (hostPlatform === 'win32' && this.absorbLateExplorerFormats(now)) {
       this.lastCapturedAt = now
       if (this.settleTimer) {
         clearTimeout(this.settleTimer)
@@ -193,7 +194,7 @@ export class ClipboardWatcher {
       const key = contentSignature(data)
       const now = Date.now()
       const sameAsLast = key === this.lastCapturedKey
-      const filesUnchanged = sameAsLast && data.kind === 'files'
+      const filesUnchanged = hostPlatform === 'win32' && sameAsLast && data.kind === 'files'
       if (sameAsLast && (filesUnchanged || now - this.lastCapturedAt < COALESCE_MS)) {
         // Same payload. Files stay absorbed for as long as the path list is
         // unchanged (Explorer window close is not a copy). Other kinds only

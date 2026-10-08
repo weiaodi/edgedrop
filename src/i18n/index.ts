@@ -1,3 +1,4 @@
+import { platformShortcut } from '../lib/platform'
 import { useStore } from '../store/appStore'
 import { LANGUAGES, TRANSLATIONS, en } from './translations'
 
@@ -81,7 +82,7 @@ export function t(path: string, params?: Record<string, string | number>): strin
     }
   }
 
-  return val
+  return platformShortcut(val)
 }
 
 /**

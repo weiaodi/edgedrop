@@ -1,3 +1,4 @@
+import { getMacNative } from './macos'
 /**
  * Fullscreen Game & Presentation Detection Module.
  *
@@ -112,6 +113,11 @@ export function isFullscreenAppActive(): boolean {
 }
 
 export function triggerFullscreenCheck(): void {
+  if (process.platform === 'darwin') {
+    isFullscreenActiveCache = getMacNative()?.fullscreen() ?? false
+    if (isFullscreenActiveCache) onFullscreenDetectedFn?.()
+    return
+  }
   if (process.platform !== 'win32') return
   const state = queryNotificationState()
   if (state < 0) return   // koffi unavailable or call failed
@@ -143,7 +149,7 @@ export function triggerFullscreenCheck(): void {
 const FULLSCREEN_CHECK_INTERVAL_MS = 800
 
 export function startFullscreenMonitor(): void {
-  if (process.platform !== 'win32') return
+  if (process.platform !== 'win32' && process.platform !== 'darwin') return
   if (checkTimer !== null) return
 
   triggerFullscreenCheck()  // seed cache immediately

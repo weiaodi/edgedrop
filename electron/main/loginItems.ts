@@ -1,3 +1,4 @@
+import { hostPlatform } from './platform'
 /**
  * Launch-at-login.
  *
@@ -62,7 +63,7 @@ export function formatGithubRunCommand(exePath: string): string {
 }
 
 function writeQuotedGithubRunCommand(exePath: string): boolean {
-  if (process.platform !== 'win32') return true
+  if (hostPlatform !== 'win32') return true
   try {
     execFileSync(
       'reg',
@@ -94,7 +95,7 @@ function writeQuotedGithubRunCommand(exePath: string): boolean {
  * Electron API alone cannot see.
  */
 export function getRawGithubRunCommand(name: string): string | null {
-  if (process.platform !== 'win32') return null
+  if (hostPlatform !== 'win32') return null
   try {
     const out = execFileSync(
       'reg',
@@ -114,7 +115,7 @@ export function getRawGithubRunCommand(name: string): string | null {
 
 /** Delete a raw HKCU Run value. Best-effort, returns true when gone. */
 export function deleteRawGithubRunValue(name: string): boolean {
-  if (process.platform !== 'win32') return true
+  if (hostPlatform !== 'win32') return true
   try {
     execFileSync(
       'reg',
@@ -164,7 +165,7 @@ export const STARTUP_APPROVED_KEY =
  * - 0x03 (or any odd number): Disabled by user
  */
 export function isBlockedInStartupApproved(name: string): boolean {
-  if (process.platform !== 'win32') return false
+  if (hostPlatform !== 'win32') return false
   try {
     const out = execFileSync(
       'reg',
@@ -187,7 +188,7 @@ export function isBlockedInStartupApproved(name: string): boolean {
  * Clear any disabled flag in StartupApproved\Run so Windows allows the item to launch.
  */
 export function clearStartupApprovedBlock(name: string): boolean {
-  if (process.platform !== 'win32') return true
+  if (hostPlatform !== 'win32') return true
   try {
     execFileSync(
       'reg',
@@ -234,7 +235,7 @@ export function readGithubLaunchAtLogin(): LaunchAtLoginResult {
   // Windows NSIS / portable builds: Read registry directly as authoritative source.
   // Electron's getLoginItemSettings() fails to match paths containing spaces (e.g. "Renato Souza")
   // and quoted arguments, returning false negatives that cause UI toggles to flap OFF.
-  if (process.platform === 'win32') {
+  if (hostPlatform === 'win32') {
     let foundName: string | null = null
     let rawCmd: string | null = null
 
@@ -379,10 +380,18 @@ export function applyGithubLaunchAtLogin(wantLaunch: boolean): LaunchAtLoginResu
   return readGithubLaunchAtLogin()
 }
 
+export function readMacLaunchAtLogin(): LaunchAtLoginResult {
+  try {
+    const settings = app.getLoginItemSettings()
+    return { enabled: !!settings.openAtLogin, blockedByUser: settings.status === 'requires-approval', ok: true }
+  } catch { return { enabled: false, blockedByUser: false, ok: false } }
+}
+
 export async function readLaunchAtLogin(): Promise<LaunchAtLoginResult> {
   if (!app.isPackaged) {
     return { enabled: loadSettings().launchAtLogin, blockedByUser: false, ok: true }
   }
+  if (hostPlatform === 'darwin') return readMacLaunchAtLogin()
   if (isStoreBuild()) {
     return resultFromState(await getStatus())
   }
@@ -396,6 +405,13 @@ export async function applyLaunchAtLogin(wantLaunch: boolean): Promise<LaunchAtL
   try {
     if (!app.isPackaged) {
       return { enabled: wantLaunch, blockedByUser: false, ok: true }
+    }
+    if (hostPlatform === 'darwin') {
+      try {
+        app.setLoginItemSettings({ openAtLogin: wantLaunch })
+        const seen = readMacLaunchAtLogin()
+        return { ...seen, ok: seen.ok && seen.enabled === wantLaunch }
+      } catch { return { enabled: !wantLaunch, blockedByUser: false, ok: false } }
     }
     if (isStoreBuild()) {
       try {
@@ -424,6 +440,11 @@ export async function reconcileLaunchAtLoginOnStartup(): Promise<Settings> {
   if (!app.isPackaged) return settings
 
   const os = await readLaunchAtLogin()
+  if (hostPlatform === 'darwin') {
+    // Respect System Settings changes; do not re-enable a disabled login item.
+    return os.ok && os.enabled !== settings.launchAtLogin
+      ? saveSettings({ launchAtLogin: os.enabled }) : settings
+  }
   // When the OS query itself failed (helper missing, reg blocked), never
   // flip the user's saved preference — preserve it and try again next launch.
   if (!os.ok) {

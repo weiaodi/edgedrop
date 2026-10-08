@@ -1,3 +1,4 @@
+vi.mock('../electron/main/platform', () => ({ hostPlatform: 'win32' }))
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
@@ -152,7 +153,7 @@ describe('GitHub exe launch-at-login (orphan Run keys)', () => {
       name: 'Edge-Drop',
       enabled: true
     })
-    if (process.platform === 'win32') {
+    if (true /* this suite uses a Windows platform fixture */) {
       expect(mocks.execFileSync).toHaveBeenCalledWith(
         'reg',
         expect.arrayContaining([
@@ -349,7 +350,7 @@ describe('GitHub Run-key quoting and update heal', () => {
     expect(result.ok).toBe(true)
     expect(result.enabled).toBe(true)
 
-    if (process.platform === 'win32') {
+    if (true /* this suite uses a Windows platform fixture */) {
       // Enable performs health-check `reg query` calls plus the authoritative
       // `reg add`. Assert the authoritative write happened with exact quoting.
       const addCalls = mocks.execFileSync.mock.calls.filter((c) => (c[1] as string[])[0] === 'add')
@@ -380,7 +381,7 @@ describe('GitHub Run-key quoting and update heal', () => {
       executableWillLaunchAtLogin: false
     })
     await applyLaunchAtLogin(false)
-    if (process.platform === 'win32') {
+    if (true /* this suite uses a Windows platform fixture */) {
       const calls = mocks.execFileSync.mock.calls.map((c) => (c[1] as string[])[0])
       expect(calls).toContain('delete')
       expect(calls).not.toContain('add')
@@ -411,7 +412,7 @@ describe('GitHub Run-key quoting and update heal', () => {
       name: 'Edge-Drop',
       enabled: true
     })
-    if (process.platform === 'win32') {
+    if (true /* this suite uses a Windows platform fixture */) {
       expect(mocks.execFileSync).toHaveBeenCalledWith(
         'reg',
         expect.arrayContaining(['/v', 'Edge-Drop', '/d', quotedSpaced, '/f']),
@@ -454,7 +455,7 @@ describe('GitHub Run-key quoting and update heal', () => {
 
     await reconcileLaunchAtLoginOnStartup()
 
-    if (process.platform === 'win32') {
+    if (true /* this suite uses a Windows platform fixture */) {
       const verbs = mocks.execFileSync.mock.calls.map((c) => (c[1] as string[])[0])
       // Disable path must delete the raw value so no ghost remains...
       expect(verbs).toContain('delete')

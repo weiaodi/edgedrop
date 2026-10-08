@@ -16,6 +16,8 @@ import type { ClipboardItemDto, DragRequest, MergeResult, Settings } from './typ
 /* ------------------------------------------------------------------ */
 
 export interface InvokeMap {
+  'platform:info': { args: []; result: import('./platform').PlatformInfo }
+  'platform:accessibility-settings': { args: []; result: void }
   /** Returns the full current item list + settings on startup. */
   'state:load': { args: []; result: { items: ClipboardItemDto[]; settings: Settings; version: string; isStoreBuild?: boolean } }
 

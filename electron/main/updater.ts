@@ -1,8 +1,20 @@
+import { hostPlatform } from './platform'
 import { app, net } from 'electron'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { isStoreBuild } from './config'
 import { pushState } from './state'
 import { getSettings } from '../store/settings'
 import { resolveUpdateMode } from '../../shared/types'
+
+/** Only a deliberately signed release opts into Squirrel.Mac updates. */
+export function automaticUpdatesAvailable(): boolean {
+  if (hostPlatform !== 'darwin') return true
+  try {
+    const pkg = JSON.parse(readFileSync(join(app.getAppPath(), 'package.json'), 'utf8'))
+    return pkg.macAutoUpdates !== false && pkg.build?.extraMetadata?.macAutoUpdates !== false
+  } catch { return false }
+}
 
 export interface CachedUpdateInfo {
   hasUpdate: boolean
@@ -28,7 +40,7 @@ export function clearCachedUpdateState(): void {
  * Called from ipc.ts when the renderer clicks "Restart to Update".
  */
 export function quitAndInstallUpdate(): void {
-  if (isStoreBuild()) return
+  if (isStoreBuild() || !automaticUpdatesAvailable()) return
   if (!_autoUpdater) {
     console.error('[AutoUpdater] quitAndInstall requested but autoUpdater is not initialized.')
     return
@@ -46,7 +58,7 @@ export function quitAndInstallUpdate(): void {
  * Only 'auto' mode downloads; 'notify' checks without downloading.
  */
 export function syncAutoUpdaterState(): void {
-  if (isStoreBuild() || !_autoUpdater) return
+  if (isStoreBuild() || !automaticUpdatesAvailable() || !_autoUpdater) return
   const mode = resolveUpdateMode(getSettings())
   const autoDownload = mode === 'auto'
   _autoUpdater.autoDownload = autoDownload
@@ -64,7 +76,7 @@ let bgCheckTimer: ReturnType<typeof setTimeout> | null = null
  * off stays fully network-silent.
  */
 export function triggerBackgroundCheck(delayMs = 3000): void {
-  if (isStoreBuild()) return
+  if (isStoreBuild() || !automaticUpdatesAvailable()) return
   if (bgCheckTimer !== null) {
     clearTimeout(bgCheckTimer)
     bgCheckTimer = null
@@ -114,7 +126,7 @@ function checkGitHubReleaseFast(): Promise<{ tag_name?: string } | null> {
     try {
       const request = net.request({
         method: 'GET',
-        url: 'https://api.github.com/repos/Deepender25/Edge-Drop/releases/latest'
+        url: 'https://api.github.com/repos/weiaodi/edgedrop/releases/latest'
       })
       request.setHeader('User-Agent', 'Edge-Drop-App')
       request.setHeader('Accept', 'application/vnd.github.v3+json')
@@ -160,6 +172,7 @@ export async function checkForUpdatesManual(): Promise<{ status: string; version
   if (isStoreBuild()) {
     return { status: 'up-to-date', version: app.getVersion() }
   }
+  if (!automaticUpdatesAvailable()) return { status: 'error', error: 'This Mac build uses manual updates: github.com/weiaodi/edgedrop/releases' }
 
   // Ensure autoUpdater reference is initialized for subsequent download calls
   if (!_autoUpdater) {
@@ -220,7 +233,7 @@ export async function checkForUpdatesManual(): Promise<{ status: string; version
  * Trigger download of the update when user clicks "Download & Update" in manual mode.
  */
 export async function startUpdateDownload(): Promise<void> {
-  if (isStoreBuild()) return
+  if (isStoreBuild() || !automaticUpdatesAvailable()) return
   if (!_autoUpdater) {
     try {
       const { autoUpdater } = require('electron-updater')
@@ -254,6 +267,10 @@ export async function startUpdateDownload(): Promise<void> {
  * Completely disabled on Microsoft Store (MSIX) builds to comply with Store policies.
  */
 export function initAutoUpdater(): void {
+  if (!automaticUpdatesAvailable()) {
+    console.log('[AutoUpdater] This Mac build uses manual updates.')
+    return
+  }
   if (isStoreBuild()) {
     console.log('[AutoUpdater] Store build detected — auto-updater disabled.')
     return

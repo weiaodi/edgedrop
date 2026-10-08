@@ -8,7 +8,7 @@
  *   3. On 'window-all-closed' we DON'T quit (the panel is hidden, not closed).
  *   4. Quit from the tray menu tears everything down cleanly.
  */
-import { app, BrowserWindow, protocol, session } from 'electron'
+import { app, BrowserWindow, Menu, protocol, session } from 'electron'
 import { APP_CONFIG, runtime } from './config'
 import { ensureDirs, PATHS } from '../store/paths'
 import { createWindow, getMainWindow, setInteractive, setVisible, startCursorPoll, stopCursorPoll, stopHeartbeat, setHotZoneWidth, registerTaskbarCreatedListener } from './window'
@@ -33,7 +33,7 @@ import { getThumbnailPayload, thumbnailCacheControl } from './thumbnailCache'
 // savings are worth for such a simple UI. Software compositing keeps the process
 // count and RAM footprint minimal without meaningfully affecting visual quality.
 // Electron requires this call before the ready event.
-app.disableHardwareAcceleration()
+if (process.platform !== 'darwin') app.disableHardwareAcceleration()
 
 // Restrict the renderer to a single webContents and forbid remote module usage.
 app.enableSandbox()
@@ -93,10 +93,20 @@ app.on('before-quit', () => {
 app.whenReady().then(() => {
   // GitHub NSIS needs an explicit AUMID. Store packages already have one from
   // the AppX identity; overriding it breaks toasts and taskbar grouping.
-  if (!isStoreBuild()) {
+  if (process.platform === 'win32' && !isStoreBuild()) {
     app.setAppUserModelId('com.edgedrop.app')
   }
 
+  if (process.platform === 'darwin') {
+    app.dock?.hide()
+    Menu.setApplicationMenu(Menu.buildFromTemplate([
+      { role: 'appMenu' }, { role: 'editMenu' },
+      { label: 'Edge-Drop', submenu: [
+        { label: 'Show Shelf', accelerator: 'Alt+C', click: () => pushState.togglePanel(true) },
+        { label: 'Settings…', accelerator: 'Command+,', click: () => pushState.openSettings() }
+      ] }
+    ]))
+  }
   ensureDirs()
   // NOTE: temp cleanup is intentionally NOT a blind wipe anymore. Staged drag
   // and paste artifacts are lifecycle-managed (see stagedTemp.ts) and are
@@ -159,6 +169,8 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  setVisible(true)
+  pushState.togglePanel(true)
 })
 
 // ---- image protocol handler ------------------------------------------------

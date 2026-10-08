@@ -1,3 +1,6 @@
+import { edge } from '../lib/edge'
+import { isMac } from '../lib/platform'
+import { MacPermissions } from './MacPermissions'
 import { useEffect, useState, useRef, useLayoutEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../store/appStore'
@@ -39,6 +42,10 @@ export function Settings({
   const pushToast = useStore((s) => s.pushToast)
   const updateInfo = useStore((s) => s.updateInfo)
   const isStoreBuild = useStore((s) => s.isStoreBuild)
+  const [updatesSupported, setUpdatesSupported] = useState(!isMac)
+  useEffect(() => {
+    if (isMac) void edge.getPlatformInfo().then((info) => setUpdatesSupported(info.automaticUpdatesAvailable))
+  }, [])
   const currentVersion = useStore((s) => s.currentVersion)
   const styleFlyoutOpen = useStore((s) => s.styleFlyoutOpen)
   const setStyleFlyoutOpen = useStore((s) => s.setStyleFlyoutOpen)
@@ -246,7 +253,7 @@ export function Settings({
   // 1) Downloaded update -> 'Restart to Update'
   // 2) Downloading in progress -> Live progress bar
   // 3) Update found & available -> 'Download & Update' / 'Skip'
-  const hasPromotedTopUpdate = !isStoreBuild && (
+  const hasPromotedTopUpdate = !isStoreBuild && updatesSupported && (
     !!updateDownloaded ||
     isDownloading ||
     hasBackgroundUpdate
@@ -378,7 +385,7 @@ export function Settings({
 
   // ── Promoted Top Update Card Renderer (Vertical Layout) ────────────────────
   const renderPromotedTopUpdateCard = () => {
-    if (isStoreBuild) return null
+    if (isStoreBuild || !updatesSupported) return null
     if (!hasPromotedTopUpdate) return null
 
     if (updateDownloaded) {
@@ -524,7 +531,7 @@ export function Settings({
 
   // ── Promoted Front Update Card Renderer (Horizontal Shelf Layout) ──────────
   const renderPromotedHorizontalUpdateCard = () => {
-    if (isStoreBuild) return null
+    if (isStoreBuild || !updatesSupported) return null
     if (!hasPromotedTopUpdate) return null
 
     if (updateDownloaded) {
@@ -674,7 +681,7 @@ export function Settings({
     // top card already carries Download/Skip/Restart/progress, so rendering
     // both would duplicate the prompt. The idle branch below IS the Check
     // button, which is exactly what belongs at the bottom.
-    if (isStoreBuild || hasPromotedTopUpdate) return null
+    if (isStoreBuild || !updatesSupported || hasPromotedTopUpdate) return null
     return (
       <div className="manual-update-section" ref={withRef ? updateBannerRef : undefined} style={{ width: '100%' }}>
         <div className="manual-update-card">
@@ -892,6 +899,7 @@ export function Settings({
           {horizontalTab === 'behaviour' && (
             <>
               {renderPromotedHorizontalUpdateCard()}
+              <MacPermissions horizontal />
 
               {/* ── SUB-GROUP 1 DIVIDER: General & Startup ── */}
               <div className="shelf-section-divider">
@@ -1169,7 +1177,7 @@ export function Settings({
               </div>
 
               {/* ── SUB-GROUP 5 DIVIDER: Updates ── */}
-              {!isStoreBuild && (
+              {!isStoreBuild && updatesSupported && (
                 <div className="shelf-section-divider">
                   <span className="shelf-section-divider-text">{t('tabs.updates') || 'UPDATES'}</span>
                 </div>
@@ -1190,7 +1198,7 @@ export function Settings({
                       : 'Managed by Microsoft Store'}
                   </div>
                 </div>
-                {!isStoreBuild && (
+                {!isStoreBuild && updatesSupported && (
                   <div className="shelf-card-bottom">
                     <div className="setting-pills" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 5, width: '100%' }}>
                       {([
@@ -1215,7 +1223,7 @@ export function Settings({
 
               {/* Card 12: Update Status & Actions (idle/check states; hidden
                   while the promoted front card shows an actionable state) */}
-              {!isStoreBuild && !hasPromotedTopUpdate && (
+              {!isStoreBuild && updatesSupported && !hasPromotedTopUpdate && (
                 <div className="settings-shelf-card check-updates-card behaviour-col" ref={updateBannerRef}>
                   <div className="shelf-card-top">
                     <div className="setting-group-label">
@@ -1647,6 +1655,7 @@ export function Settings({
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 >
                   {renderPromotedTopUpdateCard()}
+                  <MacPermissions />
 
                   {/* ── SUB-GROUP 1: General & Startup ───────────────── */}
                   <div className="setting-section-divider">
@@ -1892,7 +1901,7 @@ export function Settings({
                   </div>
 
                   {/* ── UPDATES SECTION (Consolidated above Community & Support) ── */}
-                  {!isStoreBuild && (
+                  {!isStoreBuild && updatesSupported && (
                     <>
                       <div className="setting-section-divider">
                         <span className="setting-section-divider-text">{t('tabs.updates') || 'UPDATES'}</span>

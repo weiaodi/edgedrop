@@ -1,3 +1,4 @@
+import { hostPlatform } from './platform'
 /**
  * System tray icon + context menu.
  *
@@ -43,7 +44,7 @@ function fallbackIcon(): Electron.NativeImage {
  * Falls back to `!nativeTheme.shouldUseDarkColors` on non-Windows or when unreadable.
  */
 export function isTaskbarLightTheme(): boolean {
-  if (process.platform === 'win32') {
+  if (hostPlatform === 'win32') {
     try {
       const out = execFileSync(
         'reg',
@@ -65,6 +66,11 @@ export function isTaskbarLightTheme(): boolean {
 
 /** Resolves the appropriate 32x32 tray icon based on the current taskbar theme. */
 export function getTrayImage(): Electron.NativeImage {
+  if (hostPlatform === 'darwin') {
+    const image = nativeImage.createFromPath(PATHS.trayDarkIcon()).resize({ width: 18, height: 18 })
+    image.setTemplateImage(true)
+    return image
+  }
   const isLight = isTaskbarLightTheme()
   const preferredPath = isLight ? PATHS.trayDarkIcon() : PATHS.trayIcon()
   const fallbackPath = PATHS.trayIcon()

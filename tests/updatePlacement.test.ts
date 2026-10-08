@@ -12,10 +12,10 @@ describe('update prompt placement contracts (promoted lifecycle, bottom hides wh
   it('promoted gate includes downloading and downloaded states seamlessly', () => {
     const src = read('src/components/Settings.tsx')
     // Top card shows all active update lifecycle stages.
-    expect(src).toContain('hasPromotedTopUpdate = !isStoreBuild && (')
+    expect(src).toContain('hasPromotedTopUpdate = !isStoreBuild && updatesSupported && (')
     // Bottom manual card and horizontal status card hide while promoted.
-    expect(src).toContain('if (isStoreBuild || hasPromotedTopUpdate) return null')
-    expect(src).toContain('{!isStoreBuild && !hasPromotedTopUpdate && (')
+    expect(src).toContain('if (isStoreBuild || !updatesSupported || hasPromotedTopUpdate) return null')
+    expect(src).toContain('{!isStoreBuild && updatesSupported && !hasPromotedTopUpdate && (')
   })
 
   it('store tracks manual-flow ownership across check, download, and dismiss', () => {

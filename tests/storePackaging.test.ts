@@ -17,6 +17,7 @@ describe('GitHub vs Store packaging contracts (on-disk, not assumed)', () => {
     build: {
       asarUnpack: string[]
       extraResources?: Array<{ from: string; to: string }>
+      win: { extraResources?: Array<{ from: string; to: string }> }
       files?: string[]
       appx: {
         identityName: string
@@ -64,7 +65,7 @@ describe('GitHub vs Store packaging contracts (on-disk, not assumed)', () => {
 
   it('ships the windowless StartupTask helper outside the asar', () => {
     expect(pkg.build.files).toEqual(expect.arrayContaining(['!resources/startup/**/*.exe']))
-    expect(pkg.build.extraResources).toEqual(expect.arrayContaining([
+    expect(pkg.build.win.extraResources).toEqual(expect.arrayContaining([
       { from: 'resources/startup/EdgeDropStartup.exe', to: 'startup/EdgeDropStartup.exe' }
     ]))
     expect(existsSync(join(root, 'resources/startup/EdgeDropStartup.exe'))).toBe(true)
@@ -150,8 +151,8 @@ describe('GitHub vs Store packaging contracts (on-disk, not assumed)', () => {
   it('keeps GitHub Releases as the NSIS publish source and NSIS artifact name', () => {
     expect(pkg.build.publish).toEqual({
       provider: 'github',
-      owner: 'Deepender25',
-      repo: 'Edge-Drop'
+      owner: 'weiaodi',
+      repo: 'edgedrop'
     })
     expect(pkg.build.nsis.artifactName).toContain('${version}')
     expect(pkg.build.nsis.artifactName).toMatch(/\.\$\{ext\}$/)
@@ -177,16 +178,16 @@ describe('GitHub vs Store packaging contracts (on-disk, not assumed)', () => {
 
   it('main process only sets the custom AUMID on the GitHub build', () => {
     const src = read('electron/main/index.ts')
-    expect(src).toMatch(/if\s*\(\s*!isStoreBuild\(\)\s*\)\s*\{[\s\S]*setAppUserModelId\('com\.edgedrop\.app'\)/)
+    expect(src).toMatch(/if\s*\(\s*process\.platform === 'win32' && !isStoreBuild\(\)\s*\)\s*\{[\s\S]*setAppUserModelId\('com\.edgedrop\.app'\)/)
     expect(src).not.toMatch(/setAppUserModelId\([\s\S]*isStoreBuild\(\)/)
   })
 
   it('Settings hides the in-app updater on Store builds', () => {
     const src = read('src/components/Settings.tsx')
-    expect(src).toContain('{!isStoreBuild && (')
+    expect(src).toContain('{!isStoreBuild && updatesSupported && (')
     expect(src).toContain('behaviour.autoUpdatesTitle')
-    expect(src).toContain('hasPromotedTopUpdate = !isStoreBuild &&')
-    expect(src).toContain('if (isStoreBuild) return null')
+    expect(src).toContain('hasPromotedTopUpdate = !isStoreBuild && updatesSupported &&')
+    expect(src).toContain('if (isStoreBuild || !updatesSupported) return null')
   })
 
   it('Settings renders Store review button on Store builds and GitHub star on GitHub builds', () => {
@@ -200,7 +201,7 @@ describe('GitHub vs Store packaging contracts (on-disk, not assumed)', () => {
 
   it('updater module hard-returns on Store for every public entry', () => {
     const src = read('electron/main/updater.ts')
-    expect(src).toMatch(/export function quitAndInstallUpdate[\s\S]*if \(isStoreBuild\(\)\) return/)
+    expect(src).toMatch(/export function quitAndInstallUpdate[\s\S]*if \(isStoreBuild\(\) \|\| !automaticUpdatesAvailable\(\)\) return/)
     expect(src).toMatch(/export function syncAutoUpdaterState[\s\S]*if \(isStoreBuild\(\)/)
     expect(src).toMatch(/export async function checkForUpdatesManual[\s\S]*if \(isStoreBuild\(\)\)/)
     expect(src).toMatch(/export async function startUpdateDownload[\s\S]*if \(isStoreBuild\(\)/)

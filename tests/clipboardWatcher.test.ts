@@ -1,3 +1,4 @@
+vi.mock('../electron/main/platform', () => ({ hostPlatform: 'win32' }))
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ClipboardWatcher } from '../electron/clipboard/ClipboardWatcher'
 import * as formats from '../electron/clipboard/formats'

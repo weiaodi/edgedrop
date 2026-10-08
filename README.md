@@ -1,3 +1,5 @@
+> **macOS port (this fork):** Edge-Drop now has Apple Silicon and Intel Mac build targets. See [MACOS.md](MACOS.md) for installation, permissions, packaging and signing, and [MACOS_VALIDATION.md](MACOS_VALIDATION.md) for tested boundaries. Source/releases: [weiaodi/edgedrop](https://github.com/weiaodi/edgedrop). The upstream Windows project and attribution are preserved below.
+
 <p align="center">
   <img src=".github/readme/Logo.gif" alt="Edge-Drop Logo" width="220" style="max-width: 100%; height: auto;" />
 </p>
@@ -213,7 +215,7 @@ A huge thank you to the incredible sponsors and products actively sponsoring Edg
 ## Quick Start
 
 ### Prerequisites
-- **Node.js** v18 or higher
+- **Node.js** v22.12 or higher
 - **OS**: Windows 10/11 (uses Win32 OLE drag pipelines and transparent-window cursor polling)
 
 ### Run from source
@@ -488,7 +490,8 @@ Edge-Drop is in **public beta**. The following are planned, in rough priority or
 - [x] **Top-edge dock** — horizontal shelf layout up to 1080px wide with its own trigger zone and settings layouts
 - [x] **Three-mode updates** — Automatic / Notify me / Off with skip-version memory and manual checks in every mode
 - [x] **In-shelf search** — type-to-filter without stealing focus, click-to-paste straight into the active app
-- [ ] **Linux & macOS ports** — replace Win32-specific paths (OLE drag, registry login, PowerShell HDROP) with cross-platform equivalents
+- [x] **macOS port in this fork** — AppKit clipboard/focus integration and architecture-specific DMG/ZIP; see MACOS.md.
+- [ ] **Linux port** — replace Win32-specific paths (OLE drag, registry login, PowerShell HDROP) with cross-platform equivalents
 - [ ] **Plugin SDK** — let users write custom format readers and drag-out targets
 - [ ] **Cloud sync (opt-in, E2E encrypted)** — sync pinned items across machines
 

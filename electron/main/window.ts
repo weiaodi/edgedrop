@@ -1,3 +1,4 @@
+import { getMacNative } from './macos'
 /**
  * The edge panel BrowserWindow.
  *
@@ -221,6 +222,11 @@ export function traceFg(tag: string): void {
 
 /** Record the foreground window unless it is our own. Last-wins. */
 export function captureExternalForeground(): void {
+  if (process.platform === 'darwin') {
+    const pid = getMacNative()?.frontmostPid() ?? 0
+    if (pid > 0 && pid !== process.pid) lastExternalForeground = pid
+    return
+  }
   if (process.platform !== 'win32' || !getForegroundWindowFn) return
   try {
     const fg = getForegroundWindowFn()
@@ -234,6 +240,7 @@ export function captureExternalForeground(): void {
 
 /** True when OUR window currently holds the OS foreground (search typing). */
 export function holdsOwnForeground(): boolean {
+  if (process.platform === 'darwin') return getMacNative()?.frontmostPid() === process.pid
   if (process.platform !== 'win32' || !getForegroundWindowFn) return false
   if (!mainWindow || mainWindow.isDestroyed()) return false
   try {
@@ -247,6 +254,7 @@ export function holdsOwnForeground(): boolean {
 
 /** Read the current foreground window (0 when none). */
 function currentFg(): number | bigint {
+  if (process.platform === 'darwin') return getMacNative()?.frontmostPid() ?? 0
   try {
     if (process.platform !== 'win32' || !getForegroundWindowFn) return 0
     return getForegroundWindowFn() ?? 0
@@ -267,6 +275,16 @@ function usableHwnd(h: number | bigint): boolean {
  * foreground afterwards.
  */
 export async function restoreFgAwaited(target: number | bigint, tag: string): Promise<boolean> {
+  if (process.platform === 'darwin') {
+    const native = getMacNative()
+    const pid = Number(target)
+    if (!native || pid <= 0 || pid === process.pid || !native.activate(pid)) return false
+    for (let attempt = 0; attempt < 8; attempt++) {
+      await new Promise((r) => setTimeout(r, 30))
+      if (native.frontmostPid() === pid) return true
+    }
+    return false
+  }
   if (process.platform !== 'win32' || !setForegroundWindowFn || !getForegroundWindowFn) {
     return false
   }
@@ -315,6 +333,16 @@ export function restoreExternalFocusAwaited(): Promise<boolean> {
  *   longer settle on success, -1 on failure.
  */
 export async function resolvePasteTarget(normalDelayMs: number): Promise<number> {
+  if (process.platform === 'darwin') {
+    const native = getMacNative()
+    if (!native?.trusted()) return -1
+    if (holdsOwnForeground()) {
+      setWindowFocusable(false)
+      if (!await restoreExternalFocusAwaited()) return -1
+    }
+    const pid = native.frontmostPid()
+    return pid > 0 && pid !== process.pid ? normalDelayMs : -1
+  }
   if (process.platform !== 'win32') return normalDelayMs
   try {
     if (!holdsOwnForeground()) return normalDelayMs
@@ -730,6 +758,7 @@ export function createWindow(): BrowserWindow {
   const { x, y, width, height } = getStickGeometry()
 
   mainWindow = new BrowserWindow({
+    ...(process.platform === 'darwin' ? { type: 'panel' as const } : {}),
     icon: PATHS.icon(),
     x,
     y,
@@ -758,6 +787,10 @@ export function createWindow(): BrowserWindow {
       spellcheck: false
     }
   })
+
+  if (process.platform === 'darwin') {
+    mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+  }
 
   // Start click-through with no forwarding — edge detection is done via cursor poll.
   mainWindow.setIgnoreMouseEvents(true, { forward: false })
@@ -1107,7 +1140,9 @@ export function setWindowFocusable(focusable: boolean): void {
         // - after==healthy other window: untouched, leave it alone (covers
         //   Alt+Tab-away: never yanks the user back).
         const self = getHwnd(mainWindow)
-        const isSelf = (h: number | bigint): boolean => !!self && !!h && hwndNumber(h) === hwndNumber(self)
+        const isSelf = (h: number | bigint): boolean => process.platform === 'darwin'
+          ? Number(h) === process.pid
+          : !!self && !!h && hwndNumber(h) === hwndNumber(self)
         const before = currentFg()
         const beforeHealthy = usableHwnd(before) && !isSelf(before)
         applyNoActivateStyle(mainWindow, true)

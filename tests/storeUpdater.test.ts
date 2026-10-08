@@ -1,3 +1,4 @@
+vi.mock('../electron/main/platform', () => ({ hostPlatform: 'win32' }))
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
@@ -118,7 +119,7 @@ describe('auto-updater isolation', () => {
       await checkForUpdatesManual()
       expect(mocks.netRequest).toHaveBeenCalledWith(expect.objectContaining({
         method: 'GET',
-        url: 'https://api.github.com/repos/Deepender25/Edge-Drop/releases/latest'
+        url: 'https://api.github.com/repos/weiaodi/edgedrop/releases/latest'
       }))
     })
   })

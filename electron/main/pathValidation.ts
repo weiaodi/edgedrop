@@ -1,3 +1,4 @@
+import { hostPlatform } from './platform'
 /**
  * Input path validation and sanitization helpers for file operations and PowerShell transactions.
  */
@@ -16,7 +17,7 @@ export function isValidFilePath(p: unknown): p is string {
   if (/[\x00-\x1F\x7F]/.test(trimmed)) return false
 
   // Reject invalid Windows path characters like wildcard chars in concrete file operations
-  if (/[*?<>|"]/.test(trimmed)) return false
+  if (hostPlatform === 'win32' && /[*?<>|"]/.test(trimmed)) return false
 
   return true
 }

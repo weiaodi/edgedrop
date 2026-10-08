@@ -28,4 +28,4 @@ Ship the existing clipboard shelf as a usable macOS menu-bar application, retain
 - [x] Product/permission/login integration
 - [x] Packaging and CI configuration (remote CI results are separate)
 - [x] Apple Silicon automated acceptance and both architecture artifacts; interactive/Intel limits recorded in MACOS_VALIDATION.md
-- [ ] Commit and verified GitHub push
+- [x] Port committed as `a5089083a9086c8f2936a65da65fa6ba38758585`, pushed to `weiaodi/edgedrop:main`, and confirmed with `git ls-remote`

@@ -530,7 +530,12 @@ function _pollTick(): void {
   if (runtime.quitting || !mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible()) return
 
   const settings = loadSettings()
-  if (settings.suppressInFullscreen && isFullscreenAppActive()) return
+  // Fullscreen Protection pauses *auto*-open only. Once the user deliberately
+  // summons the panel (hotkey/tray/menu) the override is set, and edge hover
+  // must stay live for the rest of that interaction. Without this exemption the
+  // poll bails out while the override is active, so moving the cursor off the
+  // edge and back never re-opens the shelf in fullscreen.
+  if (settings.suppressInFullscreen && !fullscreenSuppressionOverride && isFullscreenAppActive()) return
 
   const pt = screen.getCursorScreenPoint()
 

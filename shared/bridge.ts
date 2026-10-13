@@ -63,6 +63,7 @@ export interface EdgeApi {
   updateSettings: (patch: Partial<Settings>) => Promise<Settings>
   refreshLaunchAtLogin: () => Promise<Settings>
   setInteractive: (value: boolean) => Promise<void>
+  setFullscreenSuppressionOverride: (allow: boolean) => Promise<void>
   setPreviewMode: (active: boolean) => Promise<void>
   pauseHotkey: (paused: boolean) => Promise<void>
   revealFile: (path: string) => Promise<boolean>

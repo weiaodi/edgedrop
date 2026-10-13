@@ -211,6 +211,8 @@ const api = {
     invoke('settings:update', patch),
   refreshLaunchAtLogin: () => invoke('startup:refresh'),
   setInteractive: (value: boolean) => invoke('window:set-interactive', value),
+  setFullscreenSuppressionOverride: (allow: boolean) =>
+    invoke('window:set-fullscreen-suppression-override', allow),
   setPreviewMode: (active: boolean) => invoke('window:set-preview-mode', active),
   pauseHotkey: (paused: boolean) => invoke('hotkey:pause', paused),
   revealFile: (path: string) => invoke('file:reveal', path),

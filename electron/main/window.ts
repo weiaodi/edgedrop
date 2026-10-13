@@ -120,6 +120,7 @@ export const COLLAPSED_WIDTH = 0
 
 let mainWindow: BrowserWindow | null = null
 let interactive = false
+let fullscreenSuppressionOverride = false
 export let previewActive = false
 
 export let currentHotZoneWidth = 3
@@ -387,6 +388,7 @@ export function setInteractive(value: boolean): void {
     mainWindow.setSkipTaskbar(true)
     applyNoActivateStyle(mainWindow, true)
   } else {
+    fullscreenSuppressionOverride = false
     // Panel is closed: full click-through, no forwarding needed.
     mainWindow.setIgnoreMouseEvents(true, { forward: false })
     mainWindow.setAlwaysOnTop(true, 'screen-saver')
@@ -405,6 +407,11 @@ export function setInteractive(value: boolean): void {
     }
   }
 }
+
+export function setFullscreenSuppressionOverride(value: boolean): void {
+  fullscreenSuppressionOverride = value
+}
+
 
 export function setPreviewMode(active: boolean): void {
   if (previewActive === active) return
@@ -842,7 +849,11 @@ export function createWindow(): BrowserWindow {
 
   registerFullscreenActiveListener(() => {
     const settings = loadSettings()
-    if (settings.suppressInFullscreen && (settings.hoverActivation ?? true)) {
+    if (
+      settings.suppressInFullscreen &&
+      (settings.hoverActivation ?? true) &&
+      !fullscreenSuppressionOverride
+    ) {
       sendToMainWindow('window:toggle', false)
       setInteractive(false)
     }

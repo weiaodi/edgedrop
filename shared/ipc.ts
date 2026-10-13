@@ -79,6 +79,9 @@ export interface InvokeMap {
   /** Toggle whether the window is interactive (mouse-ignore). */
   'window:set-interactive': { args: [interactive: boolean]; result: void }
 
+  /** Allow an explicitly opened panel to survive fullscreen hover suppression. */
+  'window:set-fullscreen-suppression-override': { args: [allow: boolean]; result: void }
+
   /** Toggle whether the flyout preview is active (widens the window). */
   'window:set-preview-mode': { args: [active: boolean]; result: void }
 

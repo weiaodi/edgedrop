@@ -497,6 +497,8 @@
 .act > svg {
   position: relative;
   z-index: 1;
+  width: 18px;
+  height: 18px;
 }
 
 .act:hover {
@@ -1092,8 +1094,8 @@
 }
 
 .list.horizontal .act > svg {
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
 }
 
 .list.horizontal .act-divider {
@@ -1750,5 +1752,3 @@
   max-width: 440px;
   background: linear-gradient(90deg, transparent 0%, #f97316 25%, #ff8a3d 50%, #f97316 75%, transparent 100%);
 }
-
-

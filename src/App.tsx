@@ -254,6 +254,7 @@ export default function App() {
           edge.setInteractive(false)
         }
       } else {
+        edge.setFullscreenSuppressionOverride(true)
         useStore.getState().setOpen(next)
         edge.setInteractive(next)
       }
